@@ -10,8 +10,8 @@
 #include "Camera/VehicleCameraMode_FirstPerson.h"
 #include "Character/LyraCharacter.h"
 #include "Character/LyraHealthComponent.h"
+#include "Character/LyraHeroComponent.h"
 #include "Character/LyraPawnData.h"
-#include "Character/LyraPawnExtensionComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Player/LyraPlayerState.h"
@@ -166,6 +166,7 @@ void ALyraWheeledVehicle::EjectDriver()
 	Driver->SetActorTransform(VehicleRootTransform);
 	Driver->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	PC->SetControlRotation(VehicleRootTransform.GetRotation().Rotator());
+	PC->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
 	if (UAbilitySystemComponent* DriverASC = Driver->GetLyraAbilitySystemComponent())
 	{
@@ -173,6 +174,7 @@ void ALyraWheeledVehicle::EjectDriver()
 		const FGameplayTagContainer WithoutTags = FGameplayTagContainer();
 		DriverASC->CancelAbilities(&WithTags, &WithoutTags);
 	}
+	
 	SetDriver(nullptr);
 }
 

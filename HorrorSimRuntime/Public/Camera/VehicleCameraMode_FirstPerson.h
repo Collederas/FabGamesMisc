@@ -27,15 +27,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "First Person")
 	FName CameraSocketName = TEXT("FirstPersonCam");
 
-	UPROPERTY(EditDefaultsOnly, Category = "First Person")
-	FVector FirstPersonCameraOffset;
-
-	UPROPERTY(EditDefaultsOnly, Category = "First Person")
-	float RelativeYawMin;
-
-	UPROPERTY(EditDefaultsOnly, Category = "First Person")
-	float RelativeYawMax;
-
 private:
 	FRotator LastFrameVehicleRotation;
 };
