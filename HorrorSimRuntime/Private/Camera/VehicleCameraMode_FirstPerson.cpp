@@ -1,7 +1,8 @@
 ﻿#include "Camera/VehicleCameraMode_FirstPerson.h"
+
+#include "LyraWheeledVehicle.h"
+#include "Character/LyraCharacter.h"
 #include "GameFramework/Actor.h"
-#include "Components/SkeletalMeshComponent.h"
-#include "Kismet/KismetMathLibrary.h"
 
 UVehicleCameraMode_FirstPerson::UVehicleCameraMode_FirstPerson()
 {
@@ -38,12 +39,16 @@ FVector UVehicleCameraMode_FirstPerson::GetPivotLocation() const
 		return FVector::ZeroVector;
 	}
 
+	const ALyraWheeledVehicle* Vehicle = Cast<ALyraWheeledVehicle>(TargetActor);
+	ALyraCharacter* Driver = Vehicle->GetDriver();
+	
+	
 	// A generic way to find a mesh:
-	const UMeshComponent* VehicleMesh = TargetActor->FindComponentByClass<UMeshComponent>();
+	const UMeshComponent* TargetMesh = Vehicle->GetMesh();
 
-	if (VehicleMesh && VehicleMesh->DoesSocketExist(CameraSocketName))
+	if (TargetMesh && TargetMesh->DoesSocketExist(CameraSocketName))
 	{
-		return VehicleMesh->GetSocketLocation(CameraSocketName);
+		return TargetMesh->GetSocketLocation(CameraSocketName);
 	}
     
 	// Fallback to the actor's location if the socket or mesh isn't found.
@@ -65,7 +70,6 @@ FRotator UVehicleCameraMode_FirstPerson::GetPivotRotation() const
 		return TargetActor->GetActorRotation();
 	}
 
-	// This logic is identical to before, but now it lives in its intended home.
 	const FRotator CurrentVehicleRotation = TargetActor->GetActorRotation();
 	const FRotator VehicleRotationDelta = (CurrentVehicleRotation - LastFrameVehicleRotation).GetNormalized();
 	const FRotator PlayerControlRotation = PC->GetControlRotation();

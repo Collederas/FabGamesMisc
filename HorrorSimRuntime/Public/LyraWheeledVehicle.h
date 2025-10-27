@@ -4,6 +4,7 @@
 #include "AbilitySystemInterface.h"
 #include "WheeledVehiclePawn.h"
 #include "AbilitySystem/LyraAbilitySet.h"
+#include "AbilitySystem/FuelAttributeSet.h"
 #include "Camera/LyraCameraMode.h"
 #include "Teams/LyraTeamAgentInterface.h"
 
@@ -16,6 +17,7 @@ struct FLyraAbilitySet_GrantedHandles;
 class ULyraAbilitySystemComponent;
 class ULyraPawnData;
 class ULyraPawnExtensionComponent;
+
 
 UENUM(BlueprintType)
 enum class ELyraVehicleCameraMode : uint8
@@ -54,6 +56,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Lyra|Vehicle")
 	void SwitchCameraMode();
+
+	UFUNCTION(BlueprintPure, Category = "Lyra|Vehicle")
+	float GetMaxFuel();
 	
 protected:
 	TSubclassOf<ULyraCameraMode> DetermineCameraMode();
@@ -67,6 +72,12 @@ protected:
 	// Ends the death sequence for the character (detaches controller, destroys pawn, etc...)
 	UFUNCTION()
 	virtual void OnDeathFinished(AActor* OwningActor);
+	
+	virtual void OnOutOfFuel(AActor* EffectInstigator, AActor* EffectCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
+
+	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
+	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
+	
 public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -86,13 +97,16 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<ULyraCameraMode> ThirdPersonModeClass;
-	
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Lyra|Abilities")
 	TObjectPtr<ULyraAbilitySystemComponent> AbilitySystemComponent;
 
 	UPROPERTY()
 	TObjectPtr<const class ULyraHealthSet> HealthSet;
+
+	UPROPERTY()
+	TObjectPtr<const class UFuelAttributeSet> FuelAttributeSet;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Lyra|Character", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<ULyraCameraComponent> CameraComponent;

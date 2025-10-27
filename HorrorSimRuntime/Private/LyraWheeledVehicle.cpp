@@ -2,18 +2,22 @@
 #include "LyraWheeledVehicle.h"
 
 #include "AbilitySystemComponent.h"
+#include "ChaosVehicleMovementComponent.h"
+#include "HorrorSimGameplayTags.h"
 #include "HorrorSimLogChannels.h"
 #include "AbilitySystem/LyraAbilitySet.h"
 #include "AbilitySystem/LyraAbilitySystemComponent.h"
+#include "AbilitySystem/FuelAttributeSet.h"
 #include "AbilitySystem/Attributes/LyraHealthSet.h"
 #include "Camera/LyraCameraComponent.h"
 #include "Camera/VehicleCameraMode_FirstPerson.h"
 #include "Character/LyraCharacter.h"
 #include "Character/LyraHealthComponent.h"
-#include "Character/LyraHeroComponent.h"
 #include "Character/LyraPawnData.h"
+#include "Character/LyraPawnExtensionComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Input/LyraInputComponent.h"
 #include "Player/LyraPlayerState.h"
 
 
@@ -28,6 +32,9 @@ ALyraWheeledVehicle::ALyraWheeledVehicle(const FObjectInitializer& ObjectInitial
 
 	// These attribute sets will be detected by AbilitySystemComponent::InitializeComponent. Keeping a reference so that the sets don't get garbage collected before that.
 	HealthSet = CreateDefaultSubobject<ULyraHealthSet>(TEXT("HealthSet"));
+	FuelAttributeSet = CreateDefaultSubobject<UFuelAttributeSet>(TEXT("VehicleAttributeSet"));
+
+	FuelAttributeSet->OnOutOfFuel.AddUObject(this, &ThisClass::OnOutOfFuel);
 
 	// AbilitySystemComponent needs to be updated at a high frequency.
 	SetNetUpdateFrequency(100.0f);
@@ -73,6 +80,42 @@ void ALyraWheeledVehicle::OnDeathFinished(AActor* OwningActor)
 		SetLifeSpan(1.0);
 }
 
+void ALyraWheeledVehicle::OnOutOfFuel(AActor* EffectInstigator, AActor* EffectCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
+{
+	UE_LOG(LogHorrorSim, Log, TEXT("OnOutOfFuel"));
+	UChaosVehicleMovementComponent* VehicleMovement = GetVehicleMovement();
+	VehicleMovement->SetThrottleInput(0.f);
+	VehicleMovement->SetBrakeInput(1.f);
+}
+
+void ALyraWheeledVehicle::Input_AbilityInputTagPressed(FGameplayTag InputTag)
+{
+	if (!Driver)
+		return;
+	
+	if (const ULyraPawnExtensionComponent* PawnExtComp = ULyraPawnExtensionComponent::FindPawnExtensionComponent(Driver))
+	{
+		if (ULyraAbilitySystemComponent* LyraASC = PawnExtComp->GetLyraAbilitySystemComponent())
+		{
+			LyraASC->AbilityInputTagPressed(InputTag);
+		}
+	}
+}
+
+void ALyraWheeledVehicle::Input_AbilityInputTagReleased(FGameplayTag InputTag)
+{
+	if (!Driver)
+		return;
+	
+	if (const ULyraPawnExtensionComponent* PawnExtComp = ULyraPawnExtensionComponent::FindPawnExtensionComponent(Driver))
+	{
+		if (ULyraAbilitySystemComponent* LyraASC = PawnExtComp->GetLyraAbilitySystemComponent())
+		{
+			LyraASC->AbilityInputTagReleased(InputTag);
+		}
+	}
+}
+
 
 void ALyraWheeledVehicle::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -88,23 +131,27 @@ void ALyraWheeledVehicle::PossessedBy(AController* NewController)
 		if (ALyraPlayerState* LyraPS = NewController->GetPlayerState<ALyraPlayerState>())
 		{
 			ULyraAbilitySystemComponent* LyraASC = LyraPS->GetLyraAbilitySystemComponent();
-			LyraASC->InitAbilityActorInfo(LyraPS, this);
-
+			// LyraASC->InitAbilityActorInfo(LyraPS, this);
+			
 			for (ULyraAbilitySet* LyraAbilitySet : LyraPawnData->AbilitySets)
 			{
-				UE_LOG(LogHorrorSim, Log, TEXT("Giving abilities to PlayerState: %s"), *GetNameSafe(LyraPS));
 				LyraAbilitySet->GiveToAbilitySystem(LyraASC, &GrantedHandles);
+			}
+
+			if (ULyraInputComponent* LyraInputComponent = Cast<ULyraInputComponent>(NewController->InputComponent))
+			{
+				TArray<uint32> BindHandles;
+				LyraInputComponent->BindAbilityActions(LyraPawnData->InputConfig, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased, BindHandles);
+				LyraInputComponent->BindNativeAction(LyraPawnData->InputConfig, HorrorSimGameplayTags::InputTag_Vehicle_QuitDriving, ETriggerEvent::Triggered, this, &ThisClass::EjectDriver, /*bLogIfNotFound=*/ false);
 			}
 		}
 
 		CameraComponent->DetermineCameraModeDelegate.BindUObject(this, &ALyraWheeledVehicle::DetermineCameraMode);
 	}
-
 }
 
 void ALyraWheeledVehicle::UnPossessed()
 {
-	Super::UnPossessed();
 	AController* OldController = GetController();
 
 	if (OldController != nullptr)
@@ -112,11 +159,11 @@ void ALyraWheeledVehicle::UnPossessed()
 		if (ALyraPlayerState* LyraPS = OldController->GetPlayerState<ALyraPlayerState>())
 		{
 			ULyraAbilitySystemComponent* LyraASC = LyraPS->GetLyraAbilitySystemComponent();
-			LyraASC->InitAbilityActorInfo(LyraPS, Driver);
 			GrantedHandles.TakeFromAbilitySystem(LyraASC);
 		}
 		CameraComponent->DetermineCameraModeDelegate.Unbind();
 	}
+	Super::UnPossessed();
 }
 
 FGenericTeamId ALyraWheeledVehicle::GetGenericTeamId() const
@@ -148,6 +195,7 @@ void ALyraWheeledVehicle::EjectDriver()
 {
 	if (!Driver)
 		return;
+	
 	APlayerController* PC = Cast<APlayerController>(GetController());
 
 	if (!PC)
@@ -166,11 +214,10 @@ void ALyraWheeledVehicle::EjectDriver()
 	Driver->SetActorTransform(VehicleRootTransform);
 	Driver->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	PC->SetControlRotation(VehicleRootTransform.GetRotation().Rotator());
-	PC->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-	if (UAbilitySystemComponent* DriverASC = Driver->GetLyraAbilitySystemComponent())
+	if (ULyraAbilitySystemComponent* DriverASC = Driver->GetLyraAbilitySystemComponent())
 	{
-		const FGameplayTagContainer WithTags = FGameplayTagContainer(FGameplayTag::RequestGameplayTag(TEXT("Ability.Action.Drive")));
+		const FGameplayTagContainer WithTags = FGameplayTagContainer(HorrorSimGameplayTags::Ability_Type_Action_Drive);
 		const FGameplayTagContainer WithoutTags = FGameplayTagContainer();
 		DriverASC->CancelAbilities(&WithTags, &WithoutTags);
 	}
@@ -188,6 +235,11 @@ void ALyraWheeledVehicle::SwitchCameraMode()
 	{
 		CurrentCameraMode = ELyraVehicleCameraMode::ThirdPerson;
 	}
+}
+
+float ALyraWheeledVehicle::GetMaxFuel()
+{
+	return (FuelAttributeSet ? FuelAttributeSet->GetMaxFuel() : 0.0f);
 }
 
 TSubclassOf<ULyraCameraMode> ALyraWheeledVehicle::DetermineCameraMode()

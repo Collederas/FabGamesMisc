@@ -40,6 +40,8 @@ public class HorrorSimRuntime : ModuleRules
 				"GameplayAbilities",
 				"GameplayTags",
 				"AIModule",
+				"EnhancedInput",
+				"UMG",
 			}
 		);
 		

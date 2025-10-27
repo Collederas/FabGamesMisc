@@ -1,6 +1,8 @@
 ﻿#include "Camera/VehicleCameraMode_ThirdPerson.h"
 
 #include "LyraWheeledVehicle.h"
+#include "Character/LyraCharacter.h"
+#include "Weapons/LyraWeaponSpawner.h"
 
 UVehicleCameraMode_ThirdPerson::UVehicleCameraMode_ThirdPerson()
 {
@@ -16,7 +18,7 @@ FVector UVehicleCameraMode_ThirdPerson::GetPivotLocation() const
 	{
 		return FVector::ZeroVector;
 	}
-
+	
 	// 1) If the vehicle has a skeletal mesh and a named socket, use it.
 	if (USkeletalMeshComponent* Skel = Target->FindComponentByClass<USkeletalMeshComponent>())
 	{
