@@ -13,4 +13,11 @@ UCLASS()
 class HORRORSIMRUNTIME_API UHorrorSimInventoryContainerWidget : public ULyraActivatableWidget
 {
 	GENERATED_BODY()
+
+	virtual void NativeOnActivated() override;
+	virtual void NativeOnDeactivated() override;
+
+private:
+	/** Stores the original value of bTabNavigation so we can restore it. */
+	bool bWasTabNavigationEnabled = true; // Default to true
 };

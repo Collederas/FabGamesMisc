@@ -24,7 +24,8 @@ public class HorrorSimRuntime : ModuleRules
 			new string[]
 			{
 				"Core",
-				"FontanaGame",
+				"FontanaGame", 
+				"StateTreeModule",
 			}
 			);
 			
@@ -42,6 +43,10 @@ public class HorrorSimRuntime : ModuleRules
 				"AIModule",
 				"EnhancedInput",
 				"UMG",
+				"CommonUI",
+				"StateTreeModule", 
+				"GameplayStateTreeModule",
+				"DeveloperSettings"
 			}
 		);
 		
