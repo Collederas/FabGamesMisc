@@ -85,8 +85,8 @@ void UHerdWorldSubsystem::FindAndFormHerds()
         // Did we find a big enough group?
         if (NewHerdGroup.Num() >= HerdSettings->MinHerdSize)
         {
-            // Create the Herd!!
-            FVector SpawnLocation = NewHerdGroup[0]->GetActorLocation();
+            // Create the Herd
+            FVector SpawnLocation = NewHerdGroup[0]->GetActorLocation() + FVector(0, 0, 100);
             AHerdManager* NewManager = GetWorld()->SpawnActor<AHerdManager>(
                 HerdSettings->HerdManagerClass, 
                 SpawnLocation, 

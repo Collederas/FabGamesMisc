@@ -46,7 +46,8 @@ public class HorrorSimRuntime : ModuleRules
 				"CommonUI",
 				"StateTreeModule", 
 				"GameplayStateTreeModule",
-				"DeveloperSettings"
+				"DeveloperSettings",
+				"NavigationSystem"
 			}
 		);
 		
