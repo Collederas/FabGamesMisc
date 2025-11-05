@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "FormationHelpers.h"
 #include "GameFramework/Character.h"
 #include "HerdManager.generated.h"
 
@@ -63,6 +64,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Herd")
 	void SetHerdSpeed(float Speed);
 
+
 protected:
 	/** The StateTree component for managing AI behavior. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -87,14 +89,17 @@ protected:
 	/** How far down to trace for ground when positioning members. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Herd|Movement")
 	float GroundCheckTraceDistance = 500.0f;
-	
-	/** The maximum radius from the manager in which members will be placed. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Herd|Movement")
-	float HerdSpreadRadius = 300.0f;
 
 	/** The acceptance radius for the AI's MoveToLocation requests. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Herd|AI")
 	float PathPointArrivalRadius = 50.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Herd|Formation")
+	EHerdFormationType FormationType = EHerdFormationType::Wedge;
+
+	/** The spacing between members (or radius for Circle/Random). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Herd|Formation")
+	float FormationSpacing = 300.0f;
 
 	UPROPERTY()
 	TArray<FHerdMemberData> HerdMembersData;
@@ -110,5 +115,4 @@ private:
 	void UpdateHerdBounds();
 
 	FCollisionQueryParams HerdTraceParams;
-	FRotator TargetLookRotation;
 };

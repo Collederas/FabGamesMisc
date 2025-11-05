@@ -39,18 +39,26 @@ void AHerdManager::InitializeHerd(const TArray<AActor*>& Members)
 	HerdTraceParams.bReturnPhysicalMaterial = false;
 	HerdTraceParams.AddIgnoredActor(this);
 
-	for (AActor* Member : Members)
+	const TArray<FVector> AllFormationOffsets = FHerdFormationLogic::GenerateFormationOffsets(
+		FormationType,
+		Members.Num(),
+		FormationSpacing 
+	);
+
+	for (int32 i = 0; i < Members.Num(); ++i)
 	{
-		APawn* HerdPawn = Cast<APawn>(Member);
+		if (!AllFormationOffsets.IsValidIndex(i)) continue;
+
+		AActor* Member = Members[i];
+		if (!Member) continue;
+		
+		APawn* HerdPawn = Cast<APawn>(Members[i]);
 		if (!HerdPawn) continue;
 	
 		FHerdMemberData Data;
 		Data.Member = Member;
-
-		// Assign a random offset within the radius.
-		const FVector2D Offset2D = FMath::RandPointInCircle(HerdSpreadRadius);
-		Data.FormationOffset = FVector(Offset2D.X, Offset2D.Y, 0.f);
-		Data.ZOffset = 0.0f;
+		Data.FormationOffset = AllFormationOffsets[i];
+		Data.ZOffset = 0.f;
 		
 		// Try to get capsule half-height for Z-offsetting.
 		if (ACharacter* Character = Cast<ACharacter>(Member))
@@ -219,26 +227,28 @@ void AHerdManager::UpdateHerdMembers(float DeltaSeconds)
 		AActor* Member = Data.Member.Get();
 		if (!Member) continue;
 
-		// Calculate the member's ideal target location and rotation in world space.
-		FVector TargetLocation = ManagerLocation + Data.FormationOffset;
+		const FVector WorldOffset = ManagerRotation.RotateVector(Data.FormationOffset);
+		FVector TargetLocation = ManagerLocation + WorldOffset;
+		// The member should face the same way as the manager.
 		const FRotator TargetRotation = ManagerRotation;
-
+		
 		// Perform a ground trace to place the member on the ground.
 		const FVector TraceStart = TargetLocation + FVector(0, 0, GroundCheckTraceDistance * 0.5f);
 		const FVector TraceEnd = TargetLocation - FVector(0, 0, GroundCheckTraceDistance);
 		
 		FHitResult Hit;
+		float TargetZ = TargetLocation.Z; // Default to manager's Z if no ground found
 		if (World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_WorldStatic, HerdTraceParams))
 		{
 			// Apply the Z-offset to position the capsule bottom at the hit location.
-			TargetLocation.Z = Hit.Location.Z + Data.ZOffset; 
+			TargetZ = Hit.Location.Z + Data.ZOffset; 
 		}
-
-		// Interpolate smoothly to the target transform.
 		const FVector CurrentLocation = Member->GetActorLocation();
-		const FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaSeconds, MemberInterpolationSpeed);
-
 		const FRotator CurrentRotation = Member->GetActorRotation();
+		FVector NewLocation = FVector(TargetLocation.X, TargetLocation.Y, CurrentLocation.Z);
+
+		NewLocation.Z = FMath::FInterpTo(CurrentLocation.Z, TargetZ, DeltaSeconds, MemberInterpolationSpeed);
+
 		const FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaSeconds, MemberRotationInterpolationSpeed);
 
 		Member->SetActorLocationAndRotation(NewLocation, NewRotation);
@@ -269,8 +279,6 @@ void AHerdManager::UpdateHerdBounds()
 	// Only update if the box is valid (i.e., it contains at least one point).
 	if (HerdBox.IsValid)
 	{
-		// Calculate the center of the herd, which will lag behind the manager
-		// just as the members do.
 		const FVector HerdCenter = HerdBox.GetCenter();
 		
 		// Calculate the radius needed to encompass the farthest member.
