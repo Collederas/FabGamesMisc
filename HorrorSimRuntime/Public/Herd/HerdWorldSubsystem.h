@@ -5,9 +5,7 @@
 #include "HerdWorldSubsystem.generated.h"
 
 class AHerdManager;
-/**
- * 
- */
+
 UCLASS()
 class HORRORSIMRUNTIME_API UHerdWorldSubsystem : public UWorldSubsystem
 {
@@ -21,18 +19,15 @@ public:
 	void UnregisterHerdActor(AActor* Actor);
 
 protected:
-	// This is where we'll set the timer to run our check
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 	// The main function that runs on a timer to check for new herds
 	void FindAndFormHerds();
 
 private:
-	// This is our simple spatial partition. Just a list of all cows NOT in a herd.
-	// TWeakObjectPtr is safer than raw pointers, prevents crashes if a cow is destroyed.
+	// Cache of all actors that are close enough for the herd to be formed
 	UPROPERTY()
 	TArray<TWeakObjectPtr<AActor>> AvailableActors;
 	
-	// Timer handle for our check
 	FTimerHandle HerdCheckTimer;
 };
